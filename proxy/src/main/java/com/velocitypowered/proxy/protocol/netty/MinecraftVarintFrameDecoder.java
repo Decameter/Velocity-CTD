@@ -101,7 +101,7 @@ public class MinecraftVarintFrameDecoder extends ByteToMessageDecoder {
     // https://github.com/netty/netty/pull/14050#issuecomment-2107750734:
     //
     // > The idea is that thisVarintMask has 0s above the first one of firstOneOnStop, and 1s at
-    // > and below it. For example if firstOneOnStop is 0x800080 (where the last 0x80 is the only
+    // > and below it. For example, if firstOneOnStop is 0x800080 (where the last 0x80 is the only
     // > one that matters), then thisVarintMask is 0xFF.
     //
     // this is also documented in Hacker's Delight, section 2-1 "Manipulating Rightmost Bits"

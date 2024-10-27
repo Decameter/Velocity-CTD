@@ -49,11 +49,11 @@ public class ServerListPingHandler {
   private boolean displayOutdatedPing(final ProtocolVersion clientVersion) {
     String minVersion = server.getConfiguration().getMinimumVersion();
     ProtocolVersion minimumVersion = ProtocolVersion.getVersionByName(minVersion);
-    return !clientVersion.lessThan(minimumVersion);
+    return clientVersion.lessThan(minimumVersion);
   }
 
   private ServerPing constructLocalPing(ProtocolVersion version) {
-    boolean outdated = !displayOutdatedPing(version);
+    boolean outdated = displayOutdatedPing(version);
 
     if (version == ProtocolVersion.UNKNOWN || (outdated)) {
       version = ProtocolVersion.MAXIMUM_VERSION;

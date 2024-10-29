@@ -244,7 +244,7 @@ public interface Player extends
    * <p>Note that since 1.20.3 it is no longer recommended to use
    * this method as it will only return the last applied
    * resource pack. To get all applied resource packs, use
-   * {@link #getAppliedResourcePacks()} instead. </p>
+   * {@link #getAppliedResourcePacks()} instead.</p>
    *
    * @return the applied resource pack or null if none.
    */
@@ -260,7 +260,7 @@ public interface Player extends
    * <p>Note that since 1.20.3 it is no longer recommended to use
    * this method as it will only return the last pending
    * resource pack. To get all pending resource packs, use
-   * {@link #getPendingResourcePacks()} instead. </p>
+   * {@link #getPendingResourcePacks()} instead.</p>
    *
    * @return the pending resource pack or null if none
    */

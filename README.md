@@ -12,12 +12,7 @@ Velocity-CTD is licensed under the GPLv3 license.
 Velocity-CTD was created to replace poorly made plugins or
 plugins that simply cannot be better as a result of API limitations,
 lack of support/maintainability, infrequent bumping of integral
-dependencies of Velocity, useful performance improvements, and more.
-
-Many networks have found that plugins that attempt to accomplish the
-same goal are littered with bugs and oddities, that make it hard to
-justify when using them on a large production network, which we
-fully intend to replace by providing our users a clean codebase.
+dependencies, useful performance improvements, and more.
 
 ## Goals
 
@@ -77,13 +72,20 @@ fully intend to replace by providing our users a clean codebase.
   immediately removing them upon disconnection, using player teardown. (Issue: [#1251](https://github.com/PaperMC/Velocity/issues/1251))
 
 ## Velocity-CTD Permissions
-* `velocity.command.alert` [/alert]
-* `velocity.command.alertraw` [/alertraw]
-* `velocity.command.find` [/find]
-* `velocity.command.hub` [/hub & /lobby]
-* `velocity.command.ping` [/ping]
-* `velocity.command.showall` [/showall]
-* `velocity.command.uptime` [/velocity uptime]
+* `velocity.command.alert` [/alert] (Allows you to display public alerts
+  to all users on the proxy or proxies, depending on your setup).
+* `velocity.command.alertraw` [/alertraw] (Allows you to display public non-formatted
+  alerts to all users on the proxy or proxies, depending on your setup).
+* `velocity.command.find` [/find] (Allows you to find the specific server a user is
+  actively connected to on the network).
+* `velocity.command.hub` [/hub & /lobby] (Allows you to be sent to the hub/lobby or
+  your fallback server(s), depending on your setup).
+* `velocity.command.ping` [/ping] (Returns your latency of the proxy you are currently
+  connected to and not the latency of the backend server).
+* `velocity.command.showall` [/showall] (Shows all users connected to a specific server
+  on the proxy).
+* `velocity.command.uptime` [/velocity uptime] (Displays how long the proxy has been
+  online for, from immediate runtime).
 
 ## Building
 

@@ -182,10 +182,10 @@ public class ClientSettingsPacket implements MinecraftPacket {
 
         if (version.noLessThan(ProtocolVersion.MINECRAFT_1_18)) {
           this.clientListingAllowed = buf.readBoolean();
-        }
 
-        if (version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
-          ProtocolUtils.writeVarInt(buf, particleStatus);
+          if (version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
+            this.particleStatus = ProtocolUtils.readVarInt(buf);
+          }
         }
       }
     }
@@ -215,10 +215,10 @@ public class ClientSettingsPacket implements MinecraftPacket {
 
         if (version.noLessThan(ProtocolVersion.MINECRAFT_1_18)) {
           buf.writeBoolean(clientListingAllowed);
+        }
 
-          if (version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
-            ProtocolUtils.writeVarInt(buf, particleStatus);
-          }
+        if (version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
+          ProtocolUtils.writeVarInt(buf, particleStatus);
         }
       }
     }

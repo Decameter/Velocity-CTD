@@ -298,7 +298,9 @@ public class BackendPlaySessionHandler implements MinecraftSessionHandler {
           .rewriteMinecraftBrand(packet,
               server.getVersion(),
               ProtocolVersion.MAXIMUM_VERSION,
-              server.getConfiguration().getServerBrand());
+              server.getConfiguration().getServerBrand(),
+              server.getConfiguration().getProxyBrandCustom(),
+              server.getConfiguration().getBackendBrandCustom());
       playerConnection.write(rewritten);
       return true;
     }

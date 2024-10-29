@@ -213,33 +213,46 @@ accepts-transfers = false
 allow-illegal-characters-in-chat = false
 
 # Modifies the server brand that displays in your debug menu
-# and does not contain any specialized handling for reformatting,
-# as no other locations modify attempt to modify the base format.
-server-brand = "{0} ({1})"
+# Available options:
+# - "{backend-brand}"          Returns the brand of the server you are connected to. E.g.,
+#                              "Paper," "Pufferfish," or "Purpur" would be valid brands.
+# - "{backend-brand-custom}":  Returns your custom proxy brand defined as "custom-brand-backend" in this
+#                              configuration to maintain brand reformatting for internal pingers. To use
+#                              this configuration option, replace "{backend-brand}" with "{backend-brand-custom}."
+# - "{proxy-brand}":           Returns the proxy brand from Velocity, which is
+#                              used to identify the name of the project or proxy.
+# - "{proxy-brand-custom}":    Returns your custom proxy brand defined as "custom-brand-proxy" in this
+#                              configuration to maintain brand reformatting from external pingers. To use
+#                              this configuration option, replace "{proxy-brand}" with "{proxy-brand-custom}."
+server-brand = "{backend-brand} ({proxy-brand})"
 
 # Modifies the brand and server version that displays in the multiplayer menu and status pingers.
 # Available options:
-# - "{protocol-min}":        Returns the lowest compatible version from the
-#                            minimum-version key within this configuration.
-# - "{protocol-max}":        Returns the highest compatible version from the
-#                            ProtocolVersion class within Velocity's code.
-# - "{protocol}":            Returns the lowest, highest compatible version from the
-#                            ProtocolVersion class within Velocity's code.
-#                            E.g., if a protocol shares two versions, it will output
-#                            the lowest version from the list.
-# - "{proxy-brand}":         Returns the proxy brand from Velocity's Implementation-Title,
-#                            which is used to identify the name of the project or proxy.
-# - "{proxy-version}":       Returns the version of your proxy and git-hash that your
-#                            proxy is currently on. Build numbers in regular Velocity
-#                            would be shown with this specific assignment.
-# - "{proxy-vendor}":        Returns the group or association (vendor) of your proxy
-#                            that by default would display "Velocity Contributors."
+# - "{protocol-min}":          Returns the lowest compatible version from the
+#                              minimum-version key within this configuration.
+# - "{protocol-max}":          Returns the highest compatible version from the
+#                              ProtocolVersion class within Velocity's code.
+# - "{protocol}":              Returns the lowest, highest compatible version from the
+#                              ProtocolVersion class within Velocity's code.
+#                              E.g., if a protocol shares two versions, it will output
+#                              the lowest version from the list.
+# - "{proxy-brand}":           Returns the proxy brand from Velocity's Implementation-Title,
+#                              which is used to identify the name of the project or proxy.
+# - "{proxy-brand-custom}":    Returns your custom proxy brand defined as "custom-brand-proxy" in this
+#                              configuration to maintain brand reformatting from external pingers. To use
+#                              this configuration option, replace "{proxy-brand}" with "{proxy-brand-custom}."
+# - "{proxy-version}":         Returns the version of your proxy and git-hash that your
+#                              proxy is currently on. Build numbers in regular Velocity
+#                              would be shown with this specific assignment.
+# - "{proxy-vendor}":          Returns the group or association (vendor) of your proxy
+#                              that by default would display "Velocity Contributors."
 fallback-version-ping = "{proxy-brand} {protocol-min}-{protocol-max}"
 
-# - "{proxy-brand-custom}":  Returns your custom proxy brand defined as "custom-brand-ping" in this
-#                            configuration to maintain brand reformatting from external pingers. To use
-#                            this configuration option, replace "{proxy-brand}" with "{proxy-brand-custom}."
-custom-brand-ping = "Velocity"
+# Replaces what is returned for both the server brand and fallback version pinger.
+custom-brand-proxy = "Velocity"
+
+# Replaces what is returned as the server brand for the user's client.
+custom-brand-backend = "Paper"
 
 [query]
 # Whether to enable responding to GameSpy 4 query responses or not.

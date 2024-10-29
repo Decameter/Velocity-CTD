@@ -506,6 +506,10 @@ public final class VelocityConfiguration implements ProxyConfig {
     return advanced.getProxyBrandCustom();
   }
 
+  public String getBackendBrandCustom() {
+    return advanced.getBackendBrandCustom();
+  }
+
   public boolean isEnableDynamicFallbacks() {
     return servers.isEnableDynamicFallbacks();
   }
@@ -1032,6 +1036,8 @@ public final class VelocityConfiguration implements ProxyConfig {
     private String fallbackVersionPing = "{proxy-brand} {protocol-min}-{protocol-max}";
     @Expose
     private String proxyBrandCustom = "Velocity";
+    @Expose
+    private String backendBrandCustom = "Paper";
 
     private Advanced() {
     }
@@ -1059,7 +1065,8 @@ public final class VelocityConfiguration implements ProxyConfig {
         this.allowIllegalCharactersInChat = config.getOrElse("allow-illegal-characters-in-chat", false);
         this.serverBrand = config.getOrElse("server-brand", "{0} ({1})");
         this.fallbackVersionPing = config.getOrElse("fallback-version-ping", "{proxy-brand} {protocol-min}-{protocol-max}");
-        this.proxyBrandCustom = config.getOrElse("custom-brand-ping", "Velocity");
+        this.proxyBrandCustom = config.getOrElse("custom-brand-proxy", "Velocity");
+        this.backendBrandCustom = config.getOrElse("custom-brand-backend", "Paper");
       }
     }
 
@@ -1153,6 +1160,10 @@ public final class VelocityConfiguration implements ProxyConfig {
 
     public String getProxyBrandCustom() {
       return this.proxyBrandCustom;
+    }
+
+    public String getBackendBrandCustom() {
+      return this.backendBrandCustom;
     }
   }
 

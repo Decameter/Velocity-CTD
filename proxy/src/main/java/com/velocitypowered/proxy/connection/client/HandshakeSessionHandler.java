@@ -45,7 +45,6 @@ import java.net.InetSocketAddress;
 import java.util.Optional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -58,7 +57,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class HandshakeSessionHandler implements MinecraftSessionHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(HandshakeSessionHandler.class);
-  private static final ComponentLogger componentLogger = ComponentLogger.logger(HandshakeSessionHandler.class);
 
   private final MinecraftConnection connection;
   private final VelocityServer server;

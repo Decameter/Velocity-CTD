@@ -1358,7 +1358,6 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
             connection.write(BundleDelimiterPacket.INSTANCE);
           }
           connection.write(StartUpdatePacket.INSTANCE);
-          MinecraftEncoder encoder = connection.getChannel().pipeline().get(MinecraftEncoder.class);
           connection.getChannel().pipeline().get(MinecraftEncoder.class).setState(StateRegistry.CONFIG);
           // Make sure we don't send any play packets to the player after update start
           connection.addPlayPacketQueueHandler();
@@ -1443,12 +1442,6 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
       return this.getInitialStatus().thenCompose(initialCheck -> {
         if (initialCheck.isPresent()) {
           return completedFuture(plainResult(initialCheck.get(), toConnect));
-        }
-
-        if (connection.getState() == StateRegistry.LOGIN && previousServer == null) {
-          logger.error("Terminating send to {} as {} isn't connected yet.", toConnect.getServerInfo().getName(), getGameProfile().getName());
-          return completedFuture(
-                plainResult(ConnectionRequestBuilder.Status.CONNECTION_CANCELLED, toConnect));
         }
 
         ServerPreConnectEvent event =

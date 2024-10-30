@@ -139,7 +139,7 @@ public final class PluginMessageUtil {
                                                           final String minimumVersion) {
     checkNotNull(message, "message");
     checkNotNull(version, "version");
-    checkNotNull(brand, "serverBrand");
+    checkNotNull(brand, "brand");
     checkArgument(isMcBrand(message), "message is not a brand plugin message");
 
     String currentBrand = readBrandMessage(message.content());

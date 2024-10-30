@@ -588,11 +588,6 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
 
   @Override
   public ConnectionRequestBuilder createConnectionRequest(final RegisteredServer server) {
-    if (this.connectedServer != null) {
-      if (this.connectedServer.getServerInfo().getAddress().equals(server.getServerInfo().getAddress())) {
-        return new ConnectionRequestBuilderImpl(this.connectedServer.getServer(), this.connectedServer);
-      }
-    }
     return new ConnectionRequestBuilderImpl(server, this.connectedServer);
   }
 

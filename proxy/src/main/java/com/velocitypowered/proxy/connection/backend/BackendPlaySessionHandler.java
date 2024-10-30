@@ -294,14 +294,21 @@ public class BackendPlaySessionHandler implements MinecraftSessionHandler {
     }
 
     if (PluginMessageUtil.isMcBrand(packet)) {
-      PluginMessagePacket rewritten = PluginMessageUtil
-          .rewriteMinecraftBrand(packet,
+//      PluginMessagePacket rewritten = PluginMessageUtil
+//          .rewriteMinecraftBrand(packet,
+//              server.getVersion(),
+//              playerConnection.getProtocolVersion(),
+//              ProtocolVersion.getVersionByName(server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn(),
+//              server.getConfiguration().getServerBrand(),
+//              server.getConfiguration().getProxyBrandCustom(),
+//              server.getConfiguration().getBackendBrandCustom());
+      PluginMessagePacket rewritten = PluginMessageUtil.rewriteMinecraftBrand(packet,
               server.getVersion(),
-              playerConnection.getProtocolVersion(),
-              ProtocolVersion.getVersionByName(server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn(),
+              serverConn.getPlayer().getProtocolVersion(),
               server.getConfiguration().getServerBrand(),
               server.getConfiguration().getProxyBrandCustom(),
-              server.getConfiguration().getBackendBrandCustom());
+              server.getConfiguration().getBackendBrandCustom(),
+              ProtocolVersion.getVersionByName(server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn());
       playerConnection.write(rewritten);
       return true;
     }

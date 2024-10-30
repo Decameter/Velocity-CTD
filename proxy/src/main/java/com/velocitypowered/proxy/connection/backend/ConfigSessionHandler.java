@@ -256,13 +256,11 @@ public class ConfigSessionHandler implements MinecraftSessionHandler {
   @Override
   public boolean handle(final PluginMessagePacket packet) {
     if (PluginMessageUtil.isMcBrand(packet)) {
-      String serverBrand = server.getConfiguration().getServerBrand();
-      String proxyBrandCustom = server.getConfiguration().getProxyBrandCustom();
-      String backendBrandCustom = server.getConfiguration().getBackendBrandCustom();
-      String minimumVersion = ProtocolVersion.getVersionByName(this.server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn();
       serverConn.getPlayer().getConnection().write(
           PluginMessageUtil.rewriteMinecraftBrand(packet, server.getVersion(),
-              serverConn.getPlayer().getProtocolVersion(), serverBrand, proxyBrandCustom, backendBrandCustom, minimumVersion));
+              serverConn.getPlayer().getProtocolVersion(), server.getConfiguration().getServerBrand(),
+              server.getConfiguration().getProxyBrandCustom(), server.getConfiguration().getBackendBrandCustom(),
+              ProtocolVersion.getVersionByName(this.server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn()));
     } else {
       serverConn.getPlayer().getConnection().write(packet.retain());
     }

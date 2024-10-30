@@ -71,7 +71,8 @@ public class ServerListPingHandler {
   }
 
   private String formatVersionString(final String raw, final ProtocolVersion version) {
-    final String minVersionIntroducedIn = ProtocolVersion.getVersionByName(this.server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn();
+    final String minVersionIntroducedIn =
+        ProtocolVersion.getVersionByName(this.server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn();
     return raw
         .replaceAll("\\{protocol-min}", minVersionIntroducedIn)
         .replaceAll("\\{protocol-max}", ProtocolVersion.MAXIMUM_VERSION.getMostRecentSupportedVersion())

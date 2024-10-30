@@ -142,8 +142,8 @@ public final class PluginMessageUtil {
     checkNotNull(brand, "brand");
     checkArgument(isMcBrand(message), "message is not a brand plugin message");
 
-    String currentBrand = readBrandMessage(message.content());
-    String rewrittenBrand = brand
+    final String currentBrand = readBrandMessage(message.content());
+    final String rewrittenBrand = brand
         .replaceAll("\\{protocol-min}", minimumVersion)
         .replaceAll("\\{protocol-max}", ProtocolVersion.MAXIMUM_VERSION.getMostRecentSupportedVersion())
         .replaceAll("\\{protocol}", ProtocolVersion.MAXIMUM_VERSION.getVersionIntroducedIn())

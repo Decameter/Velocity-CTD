@@ -260,7 +260,7 @@ public class ConfigSessionHandler implements MinecraftSessionHandler {
           PluginMessageUtil.rewriteMinecraftBrand(packet, server.getVersion(),
               serverConn.getPlayer().getProtocolVersion(), server.getConfiguration().getServerBrand(),
               server.getConfiguration().getProxyBrandCustom(), server.getConfiguration().getBackendBrandCustom(),
-              ProtocolVersion.getVersionByName(this.server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn()));
+              ProtocolVersion.getVersionByName(server.getConfiguration().getMinimumVersion()).getVersionIntroducedIn()));
     } else {
       serverConn.getPlayer().getConnection().write(packet.retain());
     }

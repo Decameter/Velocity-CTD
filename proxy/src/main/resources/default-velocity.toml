@@ -214,6 +214,14 @@ allow-illegal-characters-in-chat = false
 
 # Modifies the server brand that displays in your debug menu
 # Available options:
+# - "{protocol-min}":          Returns the lowest compatible version from the
+#                              minimum-version key within this configuration.
+# - "{protocol-max}":          Returns the highest compatible version from the
+#                              ProtocolVersion class within Velocity's code.
+# - "{protocol}":              Returns the lowest, highest compatible version from the
+#                              ProtocolVersion class within Velocity's code.
+#                              E.g., if a protocol shares two versions, it will output
+#                              the lowest version from the list.
 # - "{backend-brand}"          Returns the brand of the server you are connected to. E.g.,
 #                              "Paper," "Pufferfish," or "Purpur" would be valid brands.
 # - "{backend-brand-custom}":  Returns your custom proxy brand defined as "custom-brand-backend" in this
@@ -224,6 +232,11 @@ allow-illegal-characters-in-chat = false
 # - "{proxy-brand-custom}":    Returns your custom proxy brand defined as "custom-brand-proxy" in this
 #                              configuration to maintain brand reformatting from external pingers. To use
 #                              this configuration option, replace "{proxy-brand}" with "{proxy-brand-custom}."
+# - "{proxy-version}":         Returns the version of your proxy and git-hash that your
+#                              proxy is currently on. Build numbers in regular Velocity
+#                              would be shown with this specific assignment.
+# - "{proxy-vendor}":          Returns the group or association (vendor) of your proxy
+#                              that by default would display "Velocity Contributors."
 server-brand = "{backend-brand} ({proxy-brand})"
 
 # Modifies the brand and server version that displays in the multiplayer menu and status pingers.

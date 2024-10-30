@@ -143,10 +143,15 @@ public final class PluginMessageUtil {
 
     String currentBrand = readBrandMessage(message.content());
     String rewrittenBrand = serverBrand
+        .replaceAll("\\{protocol-min}", ProtocolVersion.MINIMUM_VERSION.getVersionIntroducedIn())
+        .replaceAll("\\{protocol-max}", ProtocolVersion.MAXIMUM_VERSION.getMostRecentSupportedVersion())
+        .replaceAll("\\{protocol}", ProtocolVersion.MAXIMUM_VERSION.getVersionIntroducedIn())
         .replaceAll("\\{backend-brand}", currentBrand)
         .replaceAll("\\{backend-brand-custom}", backendBrandCustom)
         .replaceAll("\\{proxy-brand}", version.getName())
-        .replaceAll("\\{proxy-brand-custom}", proxyBrandCustom);
+        .replaceAll("\\{proxy-brand-custom}", proxyBrandCustom)
+        .replaceAll("\\{proxy-version}", version.getVersion())
+        .replaceAll("\\{proxy-vendor}", version.getVendor());
 
     ByteBuf rewrittenBuf = Unpooled.buffer();
     if (protocolVersion.noLessThan(ProtocolVersion.MINECRAFT_1_8)) {

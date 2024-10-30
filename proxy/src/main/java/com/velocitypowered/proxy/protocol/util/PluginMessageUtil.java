@@ -127,23 +127,24 @@ public final class PluginMessageUtil {
    *
    * @param message the plugin message
    * @param version the proxy version
-   * @param serverBrand the brand format
+   * @param brand the brand format
    * @return the rewritten plugin message
    */
   public static PluginMessagePacket rewriteMinecraftBrand(final PluginMessagePacket message,
                                                           final ProxyVersion version,
                                                           final ProtocolVersion protocolVersion,
-                                                          final String serverBrand,
+                                                          final String brand,
                                                           final String proxyBrandCustom,
-                                                          final String backendBrandCustom) {
+                                                          final String backendBrandCustom,
+                                                          final String minimumVersion) {
     checkNotNull(message, "message");
     checkNotNull(version, "version");
-    checkNotNull(serverBrand, "serverBrand");
+    checkNotNull(brand, "serverBrand");
     checkArgument(isMcBrand(message), "message is not a brand plugin message");
 
     String currentBrand = readBrandMessage(message.content());
-    String rewrittenBrand = serverBrand
-        .replaceAll("\\{protocol-min}", ProtocolVersion.MINIMUM_VERSION.getVersionIntroducedIn())
+    String rewrittenBrand = brand
+        .replaceAll("\\{protocol-min}", minimumVersion)
         .replaceAll("\\{protocol-max}", ProtocolVersion.MAXIMUM_VERSION.getMostRecentSupportedVersion())
         .replaceAll("\\{protocol}", ProtocolVersion.MAXIMUM_VERSION.getVersionIntroducedIn())
         .replaceAll("\\{backend-brand}", currentBrand)

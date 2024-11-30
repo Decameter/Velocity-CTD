@@ -20,7 +20,9 @@ package com.velocitypowered.proxy.command.builtin;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.CommandNode;
@@ -30,10 +32,13 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.PluginDescription;
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.util.ProxyVersion;
 import com.velocitypowered.proxy.VelocityServer;
+import com.velocitypowered.proxy.command.VelocityCommands;
+import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
 import com.velocitypowered.proxy.util.InformationUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -73,7 +78,7 @@ public final class VelocityCommand {
   private static final String USAGE = "/velocity <%s>";
 
   /**
-   * Creates a BrigadierCommand for various administrative tasks such as dump, heap, info, plugins, reload, and uptime.
+   * Creates a BrigadierCommand for various administrative tasks such as dump, heap, info, plugins, reload, sudo, and uptime.
    *
    * @param server the VelocityServer instance used for executing the commands.
    * @return the root BrigadierCommand containing all subcommands.
@@ -96,19 +101,80 @@ public final class VelocityCommand {
         .requires(source -> source.getPermissionValue("velocity.command.plugins") == Tristate.TRUE)
         .executes(new Plugins(server))
         .build();
-    final LiteralCommandNode<CommandSource> reload = BrigadierCommand
+    LiteralArgumentBuilder<CommandSource> reload = BrigadierCommand
         .literalArgumentBuilder("reload")
         .requires(source -> source.getPermissionValue("velocity.command.reload") == Tristate.TRUE)
-        .executes(new Reload(server))
+        .executes(new Reload(server));
+    final LiteralCommandNode<CommandSource> sudo = BrigadierCommand
+        .literalArgumentBuilder("sudo")
+        .requires(source -> source.getPermissionValue("velocity.command.sudo") == Tristate.TRUE)
+        .executes(ctx -> {
+          ctx.getSource().sendMessage(
+              Component.translatable("velocity.command.sudo.usage", NamedTextColor.YELLOW)
+                  .arguments(Component.text("velocity sudo"))
+          );
+          return Command.SINGLE_SUCCESS;
+        })
+        .then(BrigadierCommand.requiredArgumentBuilder("player", StringArgumentType.word())
+        .suggests((ctx, builder) -> {
+          final String argument = ctx.getArguments().containsKey("player")
+              ? ctx.getArgument("player", String.class)
+              : "";
+
+          if ("all".regionMatches(true, 0, argument, 0, argument.length())) {
+            builder.suggest("all");
+          }
+
+          if (server.getMultiProxyHandler().isEnabled()) {
+            for (MultiProxyHandler.RemotePlayerInfo i : server.getMultiProxyHandler().getAllPlayers()) {
+              if (i.getName().regionMatches(true, 0, argument, 0, argument.length())) {
+                builder.suggest(i.getName());
+              }
+            }
+
+            return builder.buildFuture();
+          }
+
+          for (final Player player : server.getAllPlayers()) {
+            final String playerName = player.getUsername();
+            if (playerName.regionMatches(true, 0, argument, 0, argument.length())) {
+              builder.suggest(playerName);
+            }
+          }
+
+          return builder.buildFuture();
+        })
+        .executes(ctx -> {
+          ctx.getSource().sendMessage(
+              Component.translatable("velocity.command.sudo.usage", NamedTextColor.YELLOW)
+                  .arguments(Component.text("velocity sudo"))
+          );
+          return Command.SINGLE_SUCCESS;
+        })
+        .then(BrigadierCommand.requiredArgumentBuilder("message/command", StringArgumentType.greedyString())
+        .executes(new Sudo(server))))
         .build();
-    final LiteralCommandNode<CommandSource> uptime = BrigadierCommand
+    LiteralArgumentBuilder<CommandSource> uptime = BrigadierCommand
         .literalArgumentBuilder("uptime")
         .requires(source -> source.getPermissionValue("velocity.command.uptime") == Tristate.TRUE)
-        .executes(new Uptime(server))
-        .build();
+        .executes(new Uptime(server));
+
+    if (server.getConfiguration().getRedis().isEnabled()) {
+      reload = reload.then(
+          BrigadierCommand.requiredArgumentBuilder("proxy", StringArgumentType.string())
+              .suggests((ctx, builder) -> VelocityCommands.suggestProxy(server, ctx, builder))
+              .executes(new ReloadRemote(server))
+      );
+
+      uptime = uptime.then(
+          BrigadierCommand.requiredArgumentBuilder("proxy", StringArgumentType.string())
+              .suggests((ctx, builder) -> VelocityCommands.suggestProxy(server, ctx, builder))
+              .executes(new UptimeRemote(server))
+      );
+    }
 
     final List<LiteralCommandNode<CommandSource>> commands = List
-            .of(dump, heap, info, plugins, reload, uptime);
+            .of(dump, heap, info, plugins, reload.build(), sudo, uptime.build());
     return new BrigadierCommand(
       commands.stream()
         .reduce(
@@ -133,25 +199,178 @@ public final class VelocityCommand {
     );
   }
 
+  /**
+   * Returns the component used by {@code /velocity uptime}.
+   *
+   * @param server the proxy server
+   * @return the component used by {@code /velocity uptime}
+   */
+  public static Component getUptimeComponent(VelocityServer server) {
+    long timeInSeconds = (System.currentTimeMillis() - server.getStartTime()) / 1000;
+    int days = (int) TimeUnit.SECONDS.toDays(timeInSeconds);
+    long hours = TimeUnit.SECONDS.toHours(timeInSeconds) - (days * 24L);
+    long minutes = TimeUnit.SECONDS.toMinutes(timeInSeconds) - (TimeUnit.SECONDS.toHours(timeInSeconds) * 60);
+    long seconds = TimeUnit.SECONDS.toSeconds(timeInSeconds) - (TimeUnit.SECONDS.toMinutes(timeInSeconds) * 60);
+
+    return Component.translatable("velocity.command.uptime",
+        NamedTextColor.GREEN,
+        Component.text(days),
+        Component.text(hours),
+        Component.text(minutes),
+        Component.text(seconds)
+    );
+  }
+
   private record Uptime(VelocityServer server) implements Command<CommandSource> {
 
     @Override
     public int run(final CommandContext<CommandSource> context) {
       final CommandSource source = context.getSource();
+      source.sendMessage(getUptimeComponent(server));
+      return Command.SINGLE_SUCCESS;
+    }
+  }
 
-      long timeInSeconds = (System.currentTimeMillis() - server.getStartTime()) / 1000;
-      int days = (int) TimeUnit.SECONDS.toDays(timeInSeconds);
-      long hours = TimeUnit.SECONDS.toHours(timeInSeconds) - (days * 24L);
-      long minutes = TimeUnit.SECONDS.toMinutes(timeInSeconds) - (TimeUnit.SECONDS.toHours(timeInSeconds) * 60);
-      long seconds = TimeUnit.SECONDS.toSeconds(timeInSeconds) - (TimeUnit.SECONDS.toMinutes(timeInSeconds) * 60);
+  private record UptimeRemote(VelocityServer server) implements Command<CommandSource> {
 
-      source.sendMessage(Component.translatable("velocity.command.uptime",
-          NamedTextColor.GREEN,
-          Component.text(days),
-          Component.text(hours),
-          Component.text(minutes),
-          Component.text(seconds)
-      ));
+    @Override
+    public int run(final CommandContext<CommandSource> context) {
+      final CommandSource source = context.getSource();
+      final String proxyId = StringArgumentType.getString(context, "proxy");
+
+      if (!server.getMultiProxyHandler().getAllProxyIds().contains(proxyId)) {
+        source.sendMessage(Component.translatable("velocity.command.proxy-does-not-exist")
+            .arguments(Component.text(proxyId)));
+        return -1;
+      }
+
+      source.sendMessage(Component.translatable("velocity.command.uptime-remote")
+          .arguments(Component.text(proxyId)));
+
+      server.getMultiProxyHandler().requestUptime(proxyId, source);
+      return Command.SINGLE_SUCCESS;
+    }
+  }
+
+  private record Sudo(VelocityServer server) implements Command<CommandSource> {
+
+    @Override
+    public int run(final CommandContext<CommandSource> context) {
+      final CommandSource source = context.getSource();
+      final String playerName = context.getArgument("player", String.class);
+      final String messageOrCommand = context.getArgument("message/command", String.class);
+
+      final MultiProxyHandler multiProxyHandler = server.getMultiProxyHandler();
+
+      if (multiProxyHandler.isEnabled()) {
+        for (String proxyId : multiProxyHandler.getAllProxyIds()) {
+          if (proxyId.equals(multiProxyHandler.getOwnProxyId())) {
+            continue;
+          }
+
+          if (playerName.equalsIgnoreCase("all")) {
+            source.sendMessage(Component.translatable(
+                "velocity.command.sudo.executed-remotely-all",
+                NamedTextColor.GREEN,
+                Component.text(proxyId),
+                Component.text(playerName),
+                Component.text(messageOrCommand)
+            ));
+            for (MultiProxyHandler.RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
+              multiProxyHandler.sudo(player, source, messageOrCommand);
+            }
+          } else {
+            for (MultiProxyHandler.RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
+              if (player.getName().equalsIgnoreCase(playerName)) {
+                source.sendMessage(Component.translatable(
+                    "velocity.command.sudo.executed-remotely",
+                    NamedTextColor.GREEN,
+                    Component.text(proxyId),
+                    Component.text(playerName),
+                    Component.text(messageOrCommand)
+                ));
+
+                multiProxyHandler.sudo(player, source, messageOrCommand);
+                return Command.SINGLE_SUCCESS;
+              }
+            }
+          }
+        }
+      }
+
+      if (this.server.getPlayerCount() == 0) {
+        context.getSource().sendMessage(Component.translatable("velocity.command.sudo.no-players"));
+        return Command.SINGLE_SUCCESS;
+      }
+
+      if (playerName.equalsIgnoreCase("all")) {
+        if (messageOrCommand.startsWith("/")) {
+          source.sendMessage(Component.translatable(
+              "velocity.command.sudo.command-executed-all",
+              NamedTextColor.GREEN,
+              Component.text(messageOrCommand)
+          ));
+        } else {
+          source.sendMessage(Component.translatable(
+              "velocity.command.sudo.message-sent-all",
+              NamedTextColor.GREEN,
+              Component.text(messageOrCommand)
+          ));
+        }
+        server.getAllPlayers().forEach(player -> {
+          if (messageOrCommand.startsWith("/")) {
+            String[] split = messageOrCommand.split(" ");
+            String command = split[0].substring(1);
+            if (this.server.getCommandManager().hasCommand(command)) {
+              this.server.getCommandManager().executeAsync(player, messageOrCommand.substring(1));
+            } else {
+              player.spoofChatInput(messageOrCommand);
+            }
+
+          } else {
+            player.spoofChatInput(messageOrCommand);
+          }
+        });
+        return Command.SINGLE_SUCCESS;
+      }
+
+      server.getPlayer(playerName).ifPresentOrElse(player -> {
+        if (messageOrCommand.startsWith("/")) {
+          String[] split = messageOrCommand.split(" ");
+          String command = split[0].substring(1);
+          if (this.server.getCommandManager().hasCommand(command)) {
+            source.sendMessage(Component.translatable(
+                "velocity.command.sudo.command-executed",
+                NamedTextColor.GREEN,
+                Component.text(playerName),
+                Component.text(messageOrCommand)
+            ));
+            this.server.getCommandManager().executeAsync(player, messageOrCommand.substring(1));
+          } else {
+            source.sendMessage(Component.translatable(
+                "velocity.command.sudo.command-executed",
+                NamedTextColor.GREEN,
+                Component.text(playerName),
+                Component.text(messageOrCommand)
+            ));
+            player.spoofChatInput(messageOrCommand);
+          }
+        } else {
+          player.spoofChatInput(messageOrCommand);
+          source.sendMessage(Component.translatable(
+              "velocity.command.sudo.message-sent",
+              NamedTextColor.GREEN,
+              Component.text(playerName),
+              Component.text(messageOrCommand)
+          ));
+        }
+      },
+          () -> source.sendMessage(Component.translatable(
+              "velocity.command.player-not-found",
+              NamedTextColor.RED,
+              Component.text(playerName)
+          ))
+      );
       return Command.SINGLE_SUCCESS;
     }
   }
@@ -176,6 +395,26 @@ public final class VelocityCommand {
         source.sendMessage(Component.translatable("velocity.command.reload-failure",
             NamedTextColor.RED));
       }
+      return Command.SINGLE_SUCCESS;
+    }
+  }
+
+  private record ReloadRemote(VelocityServer server) implements Command<CommandSource> {
+    @Override
+    public int run(final CommandContext<CommandSource> context) {
+      final CommandSource source = context.getSource();
+      final String proxyId = StringArgumentType.getString(context, "proxy");
+
+      if (!server.getMultiProxyHandler().getAllProxyIds().contains(proxyId)) {
+        source.sendMessage(Component.translatable("velocity.command.proxy-does-not-exist")
+            .arguments(Component.text(proxyId)));
+        return -1;
+      }
+
+      source.sendMessage(Component.translatable("velocity.command.reload-remote")
+          .arguments(Component.text(proxyId)));
+
+      server.getMultiProxyHandler().requestReload(proxyId, source);
       return Command.SINGLE_SUCCESS;
     }
   }
@@ -261,7 +500,7 @@ public final class VelocityCommand {
       return Command.SINGLE_SUCCESS;
     }
 
-    private TextComponent componentForPlugin(PluginDescription description) {
+    private TextComponent componentForPlugin(final PluginDescription description) {
       final String pluginInfo = description.getName().orElse(description.getId())
           + description.getVersion().map(v -> " " + v).orElse("");
 
@@ -336,7 +575,7 @@ public final class VelocityCommand {
       final Path dumpPath = Path.of("velocity-dump-"
           + new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date())
           + ".json");
-      try (final BufferedWriter bw = Files.newBufferedWriter(
+      try (BufferedWriter bw = Files.newBufferedWriter(
           dumpPath, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)) {
         bw.write(InformationUtils.toHumanReadableString(dump));
 

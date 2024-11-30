@@ -18,6 +18,7 @@
 package com.velocitypowered.proxy.connection.backend;
 
 import com.velocitypowered.api.network.ProtocolVersion;
+import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.messages.LegacyChannelIdentifier;
@@ -31,12 +32,15 @@ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 import com.velocitypowered.proxy.protocol.packet.PluginMessagePacket;
 import com.velocitypowered.proxy.protocol.util.ByteBufDataInput;
 import com.velocitypowered.proxy.protocol.util.ByteBufDataOutput;
+import com.velocitypowered.proxy.queue.ServerQueueStatus;
+import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
 import com.velocitypowered.proxy.server.VelocityRegisteredServer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.ComponentSerializer;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
@@ -72,20 +76,50 @@ public class BungeeCordMessageResponder {
         .equals(message.getChannel());
   }
 
-  private void processConnect(final ByteBufDataInput in) {
+  private void processConnect(final ByteBufDataInput in, final boolean queue) {
     String serverName = in.readUTF();
-    proxy.getServer(serverName).ifPresent(server -> player.createConnectionRequest(server)
-        .fireAndForget());
+
+    if (player.getPermissionValue("velocity.command.server." + serverName) == Tristate.FALSE) {
+      player.sendMessage(Component.translatable("velocity.command.server-does-not-exist")
+          .arguments(Component.text(serverName)));
+      return;
+    }
+
+    proxy.getServer(serverName).ifPresent(server -> {
+      if (queue && proxy.getQueueManager().isEnabled()) {
+        if (player.hasPermission("velocity.queue.bypass")) {
+          player.createConnectionRequest(server).connectWithIndication();
+        } else {
+          proxy.getQueueManager().queue(player, (VelocityRegisteredServer) server);
+        }
+      } else {
+        player.createConnectionRequest(server).fireAndForget();
+      }
+    });
   }
 
-  private void processConnectOther(final ByteBufDataInput in) {
+  private void processConnectOther(final ByteBufDataInput in, final boolean queue) {
     String playerName = in.readUTF();
     String serverName = in.readUTF();
 
     Optional<Player> referencedPlayer = proxy.getPlayer(playerName);
     Optional<RegisteredServer> referencedServer = proxy.getServer(serverName);
     if (referencedPlayer.isPresent() && referencedServer.isPresent()) {
-      referencedPlayer.get().createConnectionRequest(referencedServer.get()).fireAndForget();
+      if (referencedPlayer.get().getPermissionValue("velocity.command.server." + serverName) == Tristate.FALSE) {
+        referencedPlayer.get().sendMessage(Component.translatable("velocity.command.server-does-not-exist")
+            .arguments(Component.text(serverName)));
+        return;
+      }
+
+      if (queue && proxy.getQueueManager().isEnabled()) {
+        if (!referencedPlayer.get().hasPermission("velocity.queue.bypass")) {
+          proxy.getQueueManager().queue(player, (VelocityRegisteredServer) referencedServer.get());
+        } else {
+          referencedPlayer.get().createConnectionRequest(referencedServer.get()).fireAndForget();
+        }
+      } else {
+        referencedPlayer.get().createConnectionRequest(referencedServer.get()).fireAndForget();
+      }
     }
   }
 
@@ -107,15 +141,174 @@ public class BungeeCordMessageResponder {
       if (target.equals("ALL")) {
         out.writeUTF("PlayerCount");
         out.writeUTF("ALL");
-        out.writeInt(proxy.getPlayerCount());
+
+        int amount;
+        if (proxy.getMultiProxyHandler().isEnabled()) {
+          amount = proxy.getMultiProxyHandler().getTotalPlayerCount();
+        } else {
+          amount = proxy.getPlayerCount();
+        }
+        out.writeInt(amount);
       } else {
         proxy.getServer(target).ifPresent(rs -> {
-          int playersOnServer = rs.getPlayersConnected().size();
           out.writeUTF("PlayerCount");
           out.writeUTF(rs.getServerInfo().getName());
-          out.writeInt(playersOnServer);
+
+          int amount = 0;
+          if (proxy.getMultiProxyHandler().isEnabled()) {
+            for (MultiProxyHandler.RemotePlayerInfo info : proxy.getMultiProxyHandler().getAllPlayers()) {
+              if (info.getServerName() != null && info.getServerName().equalsIgnoreCase(rs.getServerInfo().getName())) {
+                amount++;
+              }
+            }
+          } else {
+            amount = rs.getPlayersConnected().size();
+          }
+
+          out.writeInt(amount);
         });
       }
+    }
+
+    if (buf.isReadable()) {
+      sendResponseOnConnection(buf);
+    } else {
+      buf.release();
+    }
+  }
+
+  private void processPing(final ByteBufDataInput in) {
+    UUID playerUuid = UUID.fromString(in.readUTF());
+
+    ByteBuf buf = Unpooled.buffer();
+    Player player = this.proxy.getPlayer(playerUuid).orElse(null);
+    if (player == null) {
+      return;
+    }
+    try (ByteBufDataOutput out = new ByteBufDataOutput(buf)) {
+      out.writeUTF("Ping");
+      out.writeUTF(player.getUniqueId().toString());
+      out.writeInt((int) player.getPing());
+    }
+
+    if (buf.isReadable()) {
+      sendResponseOnConnection(buf);
+    } else {
+      buf.release();
+    }
+  }
+
+  private void queuedServer(final ByteBufDataInput in) {
+    UUID playerUuid = UUID.fromString(in.readUTF());
+
+    ByteBuf buf = Unpooled.buffer();
+
+    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+
+    try (ByteBufDataOutput out = new ByteBufDataOutput(buf)) {
+      out.writeUTF("QueuedServer");
+      out.writeUTF(playerUuid.toString());
+      if (info != null && info.getQueuedServer() != null) {
+        out.writeUTF(info.getQueuedServer());
+      } else {
+        out.writeUTF("N/A");
+      }
+    }
+
+    if (buf.isReadable()) {
+      sendResponseOnConnection(buf);
+    } else {
+      buf.release();
+    }
+  }
+
+  private void queuedPosition(final ByteBufDataInput in) {
+    UUID playerUuid = UUID.fromString(in.readUTF());
+
+    ByteBuf buf = Unpooled.buffer();
+
+    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+
+    if (!proxy.getQueueManager().isMasterProxy()) {
+      return;
+    }
+
+    int position = -1;
+    if (info != null && info.getQueuedServer() != null) {
+      ServerQueueStatus status = proxy.getQueueManager().getQueue(info.getQueuedServer());
+      if (status != null && status.isQueued(playerUuid)) {
+        position = status.getQueuePosition(playerUuid);
+      }
+    }
+
+    try (ByteBufDataOutput out = new ByteBufDataOutput(buf)) {
+      out.writeUTF("QueuedPosition");
+      out.writeUTF(playerUuid.toString());
+      out.writeInt(position);
+    }
+
+    if (buf.isReadable()) {
+      sendResponseOnConnection(buf);
+    } else {
+      buf.release();
+    }
+  }
+
+  private void queuedMaxPosition(final ByteBufDataInput in) {
+    UUID playerUuid = UUID.fromString(in.readUTF());
+
+    ByteBuf buf = Unpooled.buffer();
+
+    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+
+    if (!proxy.getQueueManager().isMasterProxy()) {
+      return;
+    }
+
+    int position = -1;
+    if (info != null && info.getQueuedServer() != null) {
+      ServerQueueStatus status = proxy.getQueueManager().getQueue(info.getQueuedServer());
+      if (status != null && status.isQueued(playerUuid)) {
+        position = status.getSize();
+      }
+    }
+
+    try (ByteBufDataOutput out = new ByteBufDataOutput(buf)) {
+      out.writeUTF("MaxQueuedPosition");
+      out.writeUTF(playerUuid.toString());
+      out.writeInt(position);
+    }
+
+    if (buf.isReadable()) {
+      sendResponseOnConnection(buf);
+    } else {
+      buf.release();
+    }
+  }
+
+  private void queuedPaused(final ByteBufDataInput in) {
+    UUID playerUuid = UUID.fromString(in.readUTF());
+
+    ByteBuf buf = Unpooled.buffer();
+
+    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+
+    if (!proxy.getQueueManager().isMasterProxy()) {
+      return;
+    }
+
+    boolean paused = false;
+    if (info != null && info.getQueuedServer() != null) {
+      ServerQueueStatus status = proxy.getQueueManager().getQueue(info.getQueuedServer());
+      if (status != null && status.isQueued(playerUuid)) {
+        paused = status.isPaused();
+      }
+    }
+
+    try (ByteBufDataOutput out = new ByteBufDataOutput(buf)) {
+      out.writeUTF("QueuedPausedChannel");
+      out.writeUTF(playerUuid.toString());
+      out.writeBoolean(paused);
     }
 
     if (buf.isReadable()) {
@@ -341,11 +534,23 @@ public class BungeeCordMessageResponder {
       case "Forward":
         this.processForwardToServer(in);
         break;
+      case "ConnectDirect":
+        this.processConnect(in, false);
+        break;
+      case "ConnectQueue":
+        this.processConnect(in, true);
+        break;
       case "Connect":
-        this.processConnect(in);
+        this.processConnect(in, proxy.getConfiguration().getQueue().shouldOverrideBungeeMessaging());
+        break;
+      case "ConnectOtherDirect":
+        this.processConnectOther(in, false);
+        break;
+      case "ConnectOtherQueue":
+        this.processConnectOther(in, true);
         break;
       case "ConnectOther":
-        this.processConnectOther(in);
+        this.processConnectOther(in, proxy.getConfiguration().getQueue().shouldOverrideBungeeMessaging());
         break;
       case "IP":
         this.processIp(in);
@@ -385,6 +590,21 @@ public class BungeeCordMessageResponder {
         break;
       case "KickPlayerRaw":
         this.processKickRaw(in);
+        break;
+      case "Ping":
+        this.processPing(in);
+        break;
+      case "QueuedServer":
+        this.queuedServer(in);
+        break;
+      case "QueuedPosition":
+        this.queuedPosition(in);
+        break;
+      case "MaxQueuedPosition":
+        this.queuedMaxPosition(in);
+        break;
+      case "QueuedPausedChannel":
+        this.queuedPaused(in);
         break;
       default:
         // Do nothing, unknown command

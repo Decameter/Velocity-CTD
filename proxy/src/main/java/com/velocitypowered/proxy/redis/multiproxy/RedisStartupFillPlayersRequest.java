@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Velocity Contributors
+ * Copyright (C) 2024 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,24 +15,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.velocitypowered.proxy.command.builtin;
+package com.velocitypowered.proxy.redis.multiproxy;
 
-import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.server.RegisteredServer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import com.velocitypowered.proxy.redis.RedisPacket;
 import java.util.List;
 
-final class BuiltinCommandUtil {
+/**
+ * Constructs a packet to update the currently available players when a proxy
+ * starts up after redis has been running for a while.
+ *
+ * @param players A list of players to update the proxy on.
+ * @param proxyIdToUpdate The proxy that just started up.
+ */
+public record RedisStartupFillPlayersRequest(List<MultiProxyHandler.RemotePlayerInfo> players, String proxyIdToUpdate) implements RedisPacket {
+  public static final String ID = "redis-startup-fill-players";
 
-  private BuiltinCommandUtil() {
-    throw new AssertionError();
-  }
-
-  static List<RegisteredServer> sortedServerList(final ProxyServer proxy) {
-    List<RegisteredServer> servers = new ArrayList<>(proxy.getAllServers());
-    servers.sort(Comparator.comparing(RegisteredServer::getServerInfo));
-    return Collections.unmodifiableList(servers);
+  @Override
+  public String getId() {
+    return ID;
   }
 }

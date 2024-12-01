@@ -439,8 +439,18 @@ public class QueueAdminCommand {
         return -1;
       }
 
+      if (info.getQueuedServer() != null && info.getQueuedServer().equalsIgnoreCase(server.getServerInfo().getName())) {
+        ctx.getSource().sendMessage(Component.translatable("velocity.queue.error.already-queued.other")
+                .arguments(
+                        Component.text(info.getUsername()),
+                        Component.text(server.getServerInfo().getName())
+                )
+        );
+        return -1;
+      }
+
       this.server.getRedisManager().send(new RedisQueueAddRequest(info.getUuid(), server.getServerInfo().getName(),
-          info.getQueuePriority().getOrDefault(server.getServerInfo().getName(), 0), true,
+          info.getQueuePriority().getOrDefault(server.getServerInfo().getName(), 0), false,
           info.isFullQueueBypass(),
           info.isQueueBypass()));
     } else {

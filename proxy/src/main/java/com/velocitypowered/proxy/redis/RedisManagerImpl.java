@@ -223,7 +223,7 @@ public class RedisManagerImpl {
       JedisClientConfig clientConfig = DefaultJedisClientConfig.builder()
           .ssl(redisConfig.isUseSsl())
           .credentials(new DefaultRedisCredentials(redisConfig.getUsername(),
-              redisConfig.getPassword()))
+              redisConfig.getPassword().equalsIgnoreCase("") ? null : redisConfig.getPassword()))
           .build();
       HostAndPort hostAndPort = new HostAndPort(redisConfig.getHost(), redisConfig.getPort());
       this.jedisPool = new JedisPool(poolConfig, hostAndPort, clientConfig);

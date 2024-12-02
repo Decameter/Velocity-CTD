@@ -113,17 +113,6 @@ public class PlistCommand {
         });
   }
 
-  private Optional<RegisteredServer> validateServer(final String serverName, final CommandSource source) {
-    return server.getAllServers().stream()
-        .filter(registeredServer -> registeredServer.getServerInfo().getName().equalsIgnoreCase(serverName))
-        .findFirst()
-        .or(() -> {
-          source.sendMessage(Component.translatable("velocity.command.server-does-not-exist", NamedTextColor.RED)
-              .arguments(Component.text(serverName)));
-          return Optional.empty();
-        });
-  }
-
   private int serverCount(final CommandContext<CommandSource> context) {
     final String proxyName = getString(context, PROXY_ARG);
     final String serverName = getString(context, SERVER_ARG);
@@ -133,23 +122,26 @@ public class PlistCommand {
       return Command.SINGLE_SUCCESS;
     }
 
-    Optional<RegisteredServer> validatedServer = "all".equalsIgnoreCase(serverName)
-        ? Optional.empty()
-        : validateServer(serverName, context.getSource());
+    if ("all".equalsIgnoreCase(serverName)) {
+      List<MultiProxyHandler.RemotePlayerInfo> allPlayers = new ArrayList<>();
+      for (RegisteredServer registeredServer : server.getAllServers()) {
+        List<MultiProxyHandler.RemotePlayerInfo> serverPlayers =
+            new ArrayList<>(this.server.getMultiProxyHandler().getPlayers(validatedProxy.get()));
+        serverPlayers.removeIf(player -> !player.getServerName().equalsIgnoreCase(registeredServer.getServerInfo().getName()));
+        allPlayers.addAll(serverPlayers);
+        sendServerPlayers(context.getSource(), validatedProxy.get(), registeredServer);
+      }
 
-    if (validatedServer.isEmpty() && !"all".equalsIgnoreCase(serverName)) {
+      sendTotalProxyCount(context.getSource(), validatedProxy.get(), allPlayers.size());
       return Command.SINGLE_SUCCESS;
     }
 
-    final List<MultiProxyHandler.RemotePlayerInfo> proxyPlayers = server.getMultiProxyHandler().getPlayers(validatedProxy.get());
-    List<MultiProxyHandler.RemotePlayerInfo> mutableProxyPlayers = new ArrayList<>(proxyPlayers);
-    mutableProxyPlayers.removeIf(it -> validatedServer.isPresent() && !it.getServerName().equalsIgnoreCase(serverName));
-
-    sendServerPlayers(context.getSource(), mutableProxyPlayers, serverName);
-    if ("all".equalsIgnoreCase(serverName)) {
-      sendTotalProxyCount(context.getSource(), validatedProxy.get(), mutableProxyPlayers.size());
+    Optional<RegisteredServer> validatedServer = validateServer(serverName, context.getSource());
+    if (validatedServer.isEmpty()) {
+      return Command.SINGLE_SUCCESS;
     }
 
+    sendServerPlayers(context.getSource(), validatedProxy.get(), validatedServer.get());
     return Command.SINGLE_SUCCESS;
   }
 
@@ -166,6 +158,17 @@ public class PlistCommand {
     return Command.SINGLE_SUCCESS;
   }
 
+  private Optional<RegisteredServer> validateServer(final String serverName, final CommandSource source) {
+    return server.getAllServers().stream()
+        .filter(registeredServer -> registeredServer.getServerInfo().getName().equalsIgnoreCase(serverName))
+        .findFirst()
+        .or(() -> {
+          source.sendMessage(Component.translatable("velocity.command.server-does-not-exist", NamedTextColor.RED)
+              .arguments(Component.text(serverName)));
+          return Optional.empty();
+        });
+  }
+
   private void sendTotalProxyCount(final CommandSource target, final String proxyId, final int online) {
     final TranslatableComponent.Builder msg = Component.translatable()
             .key(online == 1
@@ -180,18 +183,29 @@ public class PlistCommand {
   }
 
   private void sendServerPlayers(final CommandSource target,
-                                 final List<MultiProxyHandler.RemotePlayerInfo> onServer,
-                                 final String serverName) {
-    onServer.stream()
-        .map(MultiProxyHandler.RemotePlayerInfo::getName)
-        .reduce((a, b) -> a + ", " + b)
+                                 final String proxyId,
+                                 final RegisteredServer server) {
+    final List<MultiProxyHandler.RemotePlayerInfo> proxyPlayers = this.server.getMultiProxyHandler().getPlayers(proxyId);
+    List<Component> players = new ArrayList<>();
+    int totalPlayers = 0;
+
+    for (MultiProxyHandler.RemotePlayerInfo player : proxyPlayers) {
+      if (server.getServerInfo().getName().equalsIgnoreCase(player.getServerName())) {
+        players.add(Component.text(player.getName()));
+        totalPlayers++;
+      }
+    }
+
+    int finalTotalPlayers = totalPlayers;
+    players.stream()
+        .reduce((a, b) -> a.append(Component.text(", ")).append(b))
         .ifPresent(playerList -> {
           final TranslatableComponent.Builder builder = Component.translatable()
               .key("velocity.command.plist-server")
               .arguments(
-                  Component.text(serverName),
-                  Component.text(onServer.size()),
-                  Component.text(playerList)
+                  Component.text(server.getServerInfo().getName()),
+                  Component.text(finalTotalPlayers),
+                  playerList
               );
           target.sendMessage(builder.build());
         });

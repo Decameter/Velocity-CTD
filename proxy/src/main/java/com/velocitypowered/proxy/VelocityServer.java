@@ -916,8 +916,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
 
   private ProxyAddress getProxyAddressToUse() {
     final String filter = getConfiguration().getDynamicProxyFilter();
-    final List<ProxyAddress> addresses = new ArrayList<>(getConfiguration().getProxyAddresses().stream().toList());
-    addresses.removeIf(address -> Objects.requireNonNull(getMultiProxyHandler().getOwnProxyId()).equalsIgnoreCase(address.proxyId()));
+    List<ProxyAddress> addresses = new ArrayList<>(getConfiguration().getProxyAddresses().stream().toList());
+    if (getMultiProxyHandler().getOwnProxyId() != null) {
+      addresses.removeIf(address -> getMultiProxyHandler().getOwnProxyId().equalsIgnoreCase(address.proxyId()));
+    }
 
     switch (filter) {
       case "MOST_EMPTY" -> addresses.sort((o1, o2) -> {

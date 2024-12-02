@@ -45,7 +45,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * Command that sends players to another proxy, if they're above 1.20.5.
+ * Command that sends players to another proxy if they're above 1.20.5.
  */
 public class TransferCommand {
 

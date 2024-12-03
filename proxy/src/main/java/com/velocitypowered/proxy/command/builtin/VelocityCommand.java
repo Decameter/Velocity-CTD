@@ -39,6 +39,7 @@ import com.velocitypowered.api.util.ProxyVersion;
 import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.command.VelocityCommands;
 import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import com.velocitypowered.proxy.util.InformationUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -126,7 +127,7 @@ public final class VelocityCommand {
           }
 
           if (server.getMultiProxyHandler().isEnabled()) {
-            for (MultiProxyHandler.RemotePlayerInfo i : server.getMultiProxyHandler().getAllPlayers()) {
+            for (RemotePlayerInfo i : server.getMultiProxyHandler().getAllPlayers()) {
               if (i.getName().regionMatches(true, 0, argument, 0, argument.length())) {
                 builder.suggest(i.getName());
               }
@@ -276,11 +277,11 @@ public final class VelocityCommand {
                 Component.text(playerName),
                 Component.text(messageOrCommand)
             ));
-            for (MultiProxyHandler.RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
+            for (RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
               multiProxyHandler.sudo(player, source, messageOrCommand);
             }
           } else {
-            for (MultiProxyHandler.RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
+            for (RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
               if (player.getName().equalsIgnoreCase(playerName)) {
                 source.sendMessage(Component.translatable(
                     "velocity.command.sudo.executed-remotely",

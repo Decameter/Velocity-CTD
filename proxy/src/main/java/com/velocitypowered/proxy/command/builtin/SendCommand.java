@@ -31,8 +31,8 @@ import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
 import com.velocitypowered.proxy.redis.multiproxy.RedisSwitchServerRequest;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -151,7 +151,7 @@ public class SendCommand {
           final String argument = context.getArguments().containsKey(PLAYER_ARG)
               ? context.getArgument(PLAYER_ARG, String.class)
               : "";
-          for (MultiProxyHandler.RemotePlayerInfo info : server.getMultiProxyHandler().getAllPlayers()) {
+          for (RemotePlayerInfo info : server.getMultiProxyHandler().getAllPlayers()) {
             final String playerName = info.getName();
             if (playerName.regionMatches(true, 0, argument, 0, argument.length())) {
               builder.suggest(playerName);
@@ -373,8 +373,8 @@ public class SendCommand {
     }
 
     if (Objects.equals(player, "all")) {
-      List<MultiProxyHandler.RemotePlayerInfo> list = this.server.getMultiProxyHandler().getAllPlayers();
-      for (final MultiProxyHandler.RemotePlayerInfo p : list) {
+      List<RemotePlayerInfo> list = this.server.getMultiProxyHandler().getAllPlayers();
+      for (final RemotePlayerInfo p : list) {
         this.server.getRedisManager().send(new RedisSwitchServerRequest(p.getName(), targetServer.getServerInfo().getName()));
       }
       final int globalCount = list.size();
@@ -398,8 +398,8 @@ public class SendCommand {
           return -1;
         }
         int amountDone = 0;
-        List<MultiProxyHandler.RemotePlayerInfo> list = this.server.getMultiProxyHandler().getAllPlayers();
-        for (final MultiProxyHandler.RemotePlayerInfo p : list) {
+        List<RemotePlayerInfo> list = this.server.getMultiProxyHandler().getAllPlayers();
+        for (final RemotePlayerInfo p : list) {
           if (p.getServerName().equalsIgnoreCase(connectedServer.get().getServerInfo().getName())) {
             this.server.getRedisManager().send(new RedisSwitchServerRequest(p.getName(), connectedServer.get().getServerInfo().getName()));
             amountDone++;
@@ -465,8 +465,8 @@ public class SendCommand {
     }
 
     int amountDone = 0;
-    List<MultiProxyHandler.RemotePlayerInfo> list = this.server.getMultiProxyHandler().getAllPlayers();
-    for (final MultiProxyHandler.RemotePlayerInfo p : list) {
+    List<RemotePlayerInfo> list = this.server.getMultiProxyHandler().getAllPlayers();
+    for (final RemotePlayerInfo p : list) {
       if (p.getServerName().equalsIgnoreCase(name)) {
         this.server.getRedisManager().send(new RedisSwitchServerRequest(p.getName(), targetServer.getServerInfo().getName()));
         amountDone++;

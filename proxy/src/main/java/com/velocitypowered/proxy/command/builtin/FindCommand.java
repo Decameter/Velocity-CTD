@@ -31,7 +31,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.command.VelocityCommands;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import java.util.Optional;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -122,7 +122,7 @@ public class FindCommand {
       return 0;
     }
 
-    MultiProxyHandler.RemotePlayerInfo info = server.getMultiProxyHandler().getPlayerInfo(player);
+    RemotePlayerInfo info = server.getMultiProxyHandler().getPlayerInfo(player);
 
     if (info.getServerName() == null) {
       context.getSource().sendMessage(

@@ -22,10 +22,9 @@ import com.velocitypowered.api.scheduler.ScheduledTask;
 import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.config.VelocityConfiguration;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
-import com.velocitypowered.proxy.redis.multiproxy.RedisPlayerSetQueuedServerRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueSendRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisSendMessageToUuidRequest;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import com.velocitypowered.proxy.server.VelocityRegisteredServer;
 import java.util.Deque;
 import java.util.HashMap;
@@ -49,9 +48,9 @@ public class ServerQueueStatus {
   private VelocityConfiguration.@MonotonicNonNull Queue config;
   private final Deque<ServerQueueEntry> queue = new ConcurrentLinkedDeque<>();
   private boolean online = true;
-  private boolean paused = false;
   private boolean full = false;
   private ScheduledTask sendingTaskHandle = null;
+  private boolean paused = false;
 
   /**
    * Constructs a {@link ServerQueueStatus} instance.
@@ -66,13 +65,21 @@ public class ServerQueueStatus {
     this.reloadConfig();
   }
 
+
   /**
    * Stops the queue.
    */
   public void stop() {
+    List<RemotePlayerInfo> list = this.velocityServer.getRedisManager().getCache();
     for (ServerQueueEntry entry : this.queue) {
-      this.velocityServer.getRedisManager().send(new RedisPlayerSetQueuedServerRequest(entry.player, null));
+      for (RemotePlayerInfo info : list) {
+        if (info.getUuid().equals(entry.player)) {
+          info.setQueuedServer(null);
+          this.velocityServer.getRedisManager().updatePlayer(info);
+        }
+      }
     }
+
     if (sendingTaskHandle != null) {
       sendingTaskHandle.cancel();
     }
@@ -129,7 +136,7 @@ public class ServerQueueStatus {
    * Sends the next player in queue, unless the queue is paused.
    */
   private void tickSending() {
-    if (paused || !online) {
+    if (isPaused() || !online) {
       return;
     }
 
@@ -196,14 +203,6 @@ public class ServerQueueStatus {
     return QueueTimeFormatter.format(Math.max(delayInSeconds, 0));
   }
 
-  /**
-   * Returns whether this queue is paused.
-   *
-   * @return whether this queue is paused
-   */
-  public boolean isPaused() {
-    return paused;
-  }
 
   /**
    * Sets whether this queue is paused.
@@ -211,7 +210,15 @@ public class ServerQueueStatus {
    * @param paused whether this queue is paused
    */
   public void setPaused(final boolean paused) {
-    this.paused = paused;
+    if (this.velocityServer.getMultiProxyHandler().isEnabled()) {
+      if (paused) {
+        this.velocityServer.getRedisManager().addPausedQueue(getServerName());
+      } else {
+        this.velocityServer.getRedisManager().removePausedQueue(getServerName());
+      }
+    } else {
+      this.paused = paused;
+    }
   }
 
   /**
@@ -238,6 +245,10 @@ public class ServerQueueStatus {
     }
 
     ServerQueueEntry entry = new ServerQueueEntry(playerUuid, this.server, this.velocityServer, priority, fullBypass, queueBypass);
+
+    RemotePlayerInfo info = this.velocityServer.getMultiProxyHandler().getPlayerInfo(playerUuid);
+    info.setQueuedServer(this.server.getServerInfo().getName());
+    this.velocityServer.getRedisManager().updatePlayer(info);
 
     synchronized (queue) {
       var iterator = queue.iterator();
@@ -304,6 +315,12 @@ public class ServerQueueStatus {
       }
     }).delay(1, TimeUnit.SECONDS).schedule();
 
+    RemotePlayerInfo info = this.velocityServer.getMultiProxyHandler().getPlayerInfo(player);
+    if (info != null) {
+      info.setQueuedServer(null);
+      this.velocityServer.getRedisManager().updatePlayer(info);
+    }
+
     this.queue.removeIf(entry -> entry.player.equals(player));
   }
 
@@ -335,15 +352,15 @@ public class ServerQueueStatus {
               .hoverEvent(Component.translatable("velocity.queue.command.listqueues.hover")
                   .arguments(
                       Component.text(queue.size()),
-                      Component.text(paused ? "True" : "False"),
+                      Component.text(isPaused() ? "True" : "False"),
                       Component.text(online ? "True" : "False")
                   ).asHoverEvent()
               )
           );
     } else {
       int queueSize = 0;
-      for (MultiProxyHandler.RemotePlayerInfo info : this.velocityServer.getMultiProxyHandler().getAllPlayers()) {
-        if (info.getServerName().equalsIgnoreCase(getServerName())) {
+      for (RemotePlayerInfo info : this.velocityServer.getMultiProxyHandler().getAllPlayers()) {
+        if (info.getQueuedServer() != null && info.getQueuedServer().equalsIgnoreCase(getServerName())) {
           queueSize++;
         }
       }
@@ -362,11 +379,24 @@ public class ServerQueueStatus {
               .hoverEvent(Component.translatable("velocity.queue.command.listqueues.hover")
                   .arguments(
                       Component.text(queueSize),
-                      Component.text("?"),
+                      Component.text(isPaused() ? "True" : "False"),
                       Component.text(status.get() ? "True" : "False")
                   ).asHoverEvent()
               )
           );
+    }
+  }
+
+  /**
+   * Check if the queue is paused.
+   *
+   * @return Whether the queue is paused or not.
+   */
+  public boolean isPaused() {
+    if (this.velocityServer.getMultiProxyHandler().isEnabled()) {
+      return this.velocityServer.getRedisManager().getPausedQueues().contains(getServerName());
+    } else {
+      return this.paused;
     }
   }
 
@@ -429,7 +459,7 @@ public class ServerQueueStatus {
       return Component.translatable("velocity.queue.player-status.connecting",
                       NamedTextColor.YELLOW)
           .arguments(Component.text(entry.target.getServerInfo().getName()));
-    } else if (paused) {
+    } else if (isPaused()) {
       return Component.translatable("velocity.queue.player-status.paused", NamedTextColor.YELLOW);
     } else if (online) {
       return Component.translatable("velocity.queue.player-status.online", NamedTextColor.YELLOW)

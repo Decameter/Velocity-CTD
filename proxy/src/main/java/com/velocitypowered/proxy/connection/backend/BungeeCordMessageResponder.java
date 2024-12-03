@@ -33,7 +33,7 @@ import com.velocitypowered.proxy.protocol.packet.PluginMessagePacket;
 import com.velocitypowered.proxy.protocol.util.ByteBufDataInput;
 import com.velocitypowered.proxy.protocol.util.ByteBufDataOutput;
 import com.velocitypowered.proxy.queue.ServerQueueStatus;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import com.velocitypowered.proxy.server.VelocityRegisteredServer;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.buffer.ByteBuf;
@@ -156,7 +156,7 @@ public class BungeeCordMessageResponder {
 
           int amount = 0;
           if (proxy.getMultiProxyHandler().isEnabled()) {
-            for (MultiProxyHandler.RemotePlayerInfo info : proxy.getMultiProxyHandler().getAllPlayers()) {
+            for (RemotePlayerInfo info : proxy.getMultiProxyHandler().getAllPlayers()) {
               if (info.getServerName() != null && info.getServerName().equalsIgnoreCase(rs.getServerInfo().getName())) {
                 amount++;
               }
@@ -203,7 +203,7 @@ public class BungeeCordMessageResponder {
 
     ByteBuf buf = Unpooled.buffer();
 
-    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+    RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
 
     try (ByteBufDataOutput out = new ByteBufDataOutput(buf)) {
       out.writeUTF("QueuedServer");
@@ -227,7 +227,7 @@ public class BungeeCordMessageResponder {
 
     ByteBuf buf = Unpooled.buffer();
 
-    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+    RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
 
     if (!proxy.getQueueManager().isMasterProxy()) {
       return;
@@ -259,7 +259,7 @@ public class BungeeCordMessageResponder {
 
     ByteBuf buf = Unpooled.buffer();
 
-    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+    RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
 
     if (!proxy.getQueueManager().isMasterProxy()) {
       return;
@@ -291,7 +291,7 @@ public class BungeeCordMessageResponder {
 
     ByteBuf buf = Unpooled.buffer();
 
-    MultiProxyHandler.RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
+    RemotePlayerInfo info = proxy.getMultiProxyHandler().getPlayerInfo(playerUuid);
 
     if (!proxy.getQueueManager().isMasterProxy()) {
       return;

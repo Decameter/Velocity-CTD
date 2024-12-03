@@ -34,10 +34,9 @@ import com.velocitypowered.proxy.command.VelocityCommands;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
 import com.velocitypowered.proxy.queue.ServerQueueEntry;
 import com.velocitypowered.proxy.queue.ServerQueueStatus;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueAddRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueLeaveRequest;
-import com.velocitypowered.proxy.redis.multiproxy.RedisQueuePauseRequest;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import com.velocitypowered.proxy.server.VelocityRegisteredServer;
 import java.util.ArrayList;
 import java.util.List;
@@ -246,7 +245,7 @@ public class QueueAdminCommand {
     if (serverName.equalsIgnoreCase("all")) {
       int amount = 0;
       if (this.server.getMultiProxyHandler().isEnabled()) {
-        for (MultiProxyHandler.RemotePlayerInfo info :
+        for (RemotePlayerInfo info :
             this.server.getMultiProxyHandler().getAllPlayers()) {
           if (info.getQueuedServer() != null) {
             amount++;
@@ -276,7 +275,7 @@ public class QueueAdminCommand {
         List<Component> players = new ArrayList<>();
 
         if (this.server.getMultiProxyHandler().isEnabled()) {
-          for (MultiProxyHandler.RemotePlayerInfo info : this.server.getMultiProxyHandler().getAllPlayers()) {
+          for (RemotePlayerInfo info : this.server.getMultiProxyHandler().getAllPlayers()) {
             if (info.getQueuedServer() != null && info.getQueuedServer().equalsIgnoreCase(s.getServerInfo().getName())) {
               players.add(Component.text(info.getUsername()));
             }
@@ -326,7 +325,7 @@ public class QueueAdminCommand {
     }
 
     if (this.server.getMultiProxyHandler().isEnabled()) {
-      for (MultiProxyHandler.RemotePlayerInfo info : this.server.getMultiProxyHandler().getAllPlayers()) {
+      for (RemotePlayerInfo info : this.server.getMultiProxyHandler().getAllPlayers()) {
         if (info.getQueuedServer() != null && info.getQueuedServer().equalsIgnoreCase(server.getServerInfo().getName())) {
           players.add(Component.text(info.getUsername()));
         }
@@ -369,7 +368,7 @@ public class QueueAdminCommand {
 
     if (server.getQueueStatus().isPaused()) {
       if (this.server.getMultiProxyHandler().isEnabled()) {
-        this.server.getRedisManager().send(new RedisQueuePauseRequest(server.getServerInfo().getName(), false));
+        this.server.getRedisManager().removePausedQueue(server.getServerInfo().getName());
       } else {
         server.getQueueStatus().setPaused(false);
       }
@@ -380,7 +379,7 @@ public class QueueAdminCommand {
     } else {
 
       if (this.server.getMultiProxyHandler().isEnabled()) {
-        this.server.getRedisManager().send(new RedisQueuePauseRequest(server.getServerInfo().getName(), true));
+        this.server.getRedisManager().addPausedQueue(server.getServerInfo().getName());
       } else {
         server.getQueueStatus().setPaused(true);
       }
@@ -407,7 +406,7 @@ public class QueueAdminCommand {
     }
 
     if (this.server.getMultiProxyHandler().isEnabled()) {
-      this.server.getRedisManager().send(new RedisQueuePauseRequest(server.getServerInfo().getName(), false));
+      this.server.getRedisManager().removePausedQueue(server.getServerInfo().getName());
     } else {
       server.getQueueStatus().setPaused(false);
     }
@@ -432,7 +431,7 @@ public class QueueAdminCommand {
             .arguments(Component.text(playerName)));
         return -1;
       }
-      MultiProxyHandler.RemotePlayerInfo info = this.server.getMultiProxyHandler().getPlayerInfo(playerName);
+      RemotePlayerInfo info = this.server.getMultiProxyHandler().getPlayerInfo(playerName);
 
       if (info.getServerName().equalsIgnoreCase(server.getServerInfo().getName())) {
         ctx.getSource().sendMessage(Component.translatable("velocity.queue.error.already-connected"));
@@ -511,9 +510,9 @@ public class QueueAdminCommand {
     int connectedSize;
     if (this.server.getMultiProxyHandler().isEnabled()) {
 
-      List<MultiProxyHandler.RemotePlayerInfo> allPlayers = this.server.getMultiProxyHandler().getAllPlayers();
+      List<RemotePlayerInfo> allPlayers = this.server.getMultiProxyHandler().getAllPlayers();
 
-      List<MultiProxyHandler.RemotePlayerInfo> connected = new ArrayList<>();
+      List<RemotePlayerInfo> connected = new ArrayList<>();
       allPlayers.forEach(a -> {
         if (a.getServerName().equalsIgnoreCase(from.getServerInfo().getName())) {
           if (a.getQueuedServer() == null || !a.getQueuedServer().equalsIgnoreCase(to.getServerInfo().getName())) {
@@ -533,7 +532,7 @@ public class QueueAdminCommand {
         return -1;
       }
 
-      for (MultiProxyHandler.RemotePlayerInfo info : connected) {
+      for (RemotePlayerInfo info : connected) {
         this.server.getRedisManager().send(new RedisQueueAddRequest(info.getUuid(), to.getServerInfo().getName(),
             info.getQueuePriority().getOrDefault(to.getServerInfo().getName(), 0), false,
             info.isFullQueueBypass(),
@@ -612,7 +611,7 @@ public class QueueAdminCommand {
     }
 
     if (this.server.getMultiProxyHandler().isEnabled()) {
-      MultiProxyHandler.RemotePlayerInfo info = this.server.getMultiProxyHandler().getPlayerInfo(playerName);
+      RemotePlayerInfo info = this.server.getMultiProxyHandler().getPlayerInfo(playerName);
 
       if (info.getQueuedServer() == null) {
         ctx.getSource().sendMessage(Component.translatable("velocity.queue.error.not-in-queue.other")
@@ -681,7 +680,7 @@ public class QueueAdminCommand {
 
     int amount = 0;
     if (this.server.getMultiProxyHandler().isEnabled()) {
-      List<MultiProxyHandler.RemotePlayerInfo> players = this.server.getMultiProxyHandler().getAllPlayers();
+      List<RemotePlayerInfo> players = this.server.getMultiProxyHandler().getAllPlayers();
 
       if (players.isEmpty()) {
         ctx.getSource().sendMessage(Component.translatable("velocity.queue.error.removeall-no-players-queued")
@@ -689,7 +688,7 @@ public class QueueAdminCommand {
         return -1;
       }
 
-      for (MultiProxyHandler.RemotePlayerInfo player : players) {
+      for (RemotePlayerInfo player : players) {
         if (player.getQueuedServer() != null && player.getQueuedServer().equalsIgnoreCase(server.getServerInfo().getName())) {
           this.server.getRedisManager().send(new RedisQueueLeaveRequest(player.getUuid(), server.getServerInfo().getName(),
               false));

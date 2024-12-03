@@ -30,7 +30,7 @@ import com.velocitypowered.api.permission.Tristate;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.command.VelocityCommands;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -123,9 +123,9 @@ public class PlistCommand {
     }
 
     if ("all".equalsIgnoreCase(serverName)) {
-      List<MultiProxyHandler.RemotePlayerInfo> allPlayers = new ArrayList<>();
+      List<RemotePlayerInfo> allPlayers = new ArrayList<>();
       for (RegisteredServer registeredServer : server.getAllServers()) {
-        List<MultiProxyHandler.RemotePlayerInfo> serverPlayers =
+        List<RemotePlayerInfo> serverPlayers =
             new ArrayList<>(this.server.getMultiProxyHandler().getPlayers(validatedProxy.get()));
         serverPlayers.removeIf(player -> !player.getServerName().equalsIgnoreCase(registeredServer.getServerInfo().getName()));
         allPlayers.addAll(serverPlayers);
@@ -153,7 +153,7 @@ public class PlistCommand {
       return Command.SINGLE_SUCCESS;
     }
 
-    final List<MultiProxyHandler.RemotePlayerInfo> proxyPlayers = server.getMultiProxyHandler().getPlayers(validatedProxy.get());
+    final List<RemotePlayerInfo> proxyPlayers = server.getMultiProxyHandler().getPlayers(validatedProxy.get());
     sendTotalProxyCount(context.getSource(), validatedProxy.get(), proxyPlayers.size());
     return Command.SINGLE_SUCCESS;
   }
@@ -185,11 +185,11 @@ public class PlistCommand {
   private void sendServerPlayers(final CommandSource target,
                                  final String proxyId,
                                  final RegisteredServer server) {
-    final List<MultiProxyHandler.RemotePlayerInfo> proxyPlayers = this.server.getMultiProxyHandler().getPlayers(proxyId);
+    final List<RemotePlayerInfo> proxyPlayers = this.server.getMultiProxyHandler().getPlayers(proxyId);
     List<Component> players = new ArrayList<>();
     int totalPlayers = 0;
 
-    for (MultiProxyHandler.RemotePlayerInfo player : proxyPlayers) {
+    for (RemotePlayerInfo player : proxyPlayers) {
       if (server.getServerInfo().getName().equalsIgnoreCase(player.getServerName())) {
         players.add(Component.text(player.getName()));
         totalPlayers++;

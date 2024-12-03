@@ -33,9 +33,9 @@ import com.velocitypowered.proxy.command.VelocityCommands;
 import com.velocitypowered.proxy.config.ProxyAddress;
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
 import com.velocitypowered.proxy.redis.multiproxy.RedisPlayerSetTransferringRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisTransferCommandRequest;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Optional;
@@ -102,7 +102,7 @@ public class TransferCommand {
                       }
 
                       if (server.getMultiProxyHandler().isEnabled()) {
-                        for (MultiProxyHandler.RemotePlayerInfo info : server.getMultiProxyHandler().getAllPlayers()) {
+                        for (RemotePlayerInfo info : server.getMultiProxyHandler().getAllPlayers()) {
                           if (info.getName().regionMatches(true, 0, argument, 0, argument.length())) {
                             builder.suggest(info.getName());
                           }

@@ -78,7 +78,6 @@ public class MultiProxyHandler {
 
     redisManager.addProxyId(this.server.getConfiguration().getRedis().getProxyId());
 
-
     redisManager.listen(RedisShuttingDownAnnouncement.ID, RedisShuttingDownAnnouncement.class, it -> {
       handleShutdown(it.proxyId());
 

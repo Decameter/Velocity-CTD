@@ -935,7 +935,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
             index = connOrder.indexOf(serverName);
             selectedServer = Optional.of(registeredServer);
             if (server.getConfiguration().getDynamicFallbackFilter().equalsIgnoreCase("FIRST_AVAILABLE")) {
-              return selectedServer;
+              serversToTry = connOrder;
             }
           } else {
             if (server.getConfiguration().getDynamicFallbackFilter().equalsIgnoreCase("MOST_POPULATED")) {

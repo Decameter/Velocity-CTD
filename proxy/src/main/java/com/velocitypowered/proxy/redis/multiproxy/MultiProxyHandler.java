@@ -269,7 +269,6 @@ public class MultiProxyHandler {
       return;
     }
 
-
     this.server.getMultiProxyHandler().handleLeave(player.getUniqueId());
   }
 

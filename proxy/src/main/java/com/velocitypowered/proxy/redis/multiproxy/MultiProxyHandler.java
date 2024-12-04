@@ -208,7 +208,6 @@ public class MultiProxyHandler {
     }
   }
 
-
   private void handleLeave(final UUID player) {
     List<RemotePlayerInfo> info = this.server.getRedisManager().getCache();
 
@@ -253,7 +252,6 @@ public class MultiProxyHandler {
   public boolean isEnabled() {
     return enabled;
   }
-
 
   /**
    * Handles the event when a player leaves the proxy.

@@ -30,7 +30,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.command.VelocityCommands;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -137,7 +137,7 @@ public class ShowAllCommand {
     }
 
     final RegisteredServer server = maybeServer.orElse(null);
-    List<MultiProxyHandler.RemotePlayerInfo> filteredList = this.server.getMultiProxyHandler()
+    List<RemotePlayerInfo> filteredList = this.server.getMultiProxyHandler()
         .getAllPlayers().stream()
         .filter(info -> info.getServerName().equalsIgnoreCase(server.getServerInfo().getName()))
         .toList();
@@ -158,7 +158,7 @@ public class ShowAllCommand {
                 Component.text(filteredList.get(0).getUsername()));
       } else {
         final String playerList = filteredList.stream()
-                .map(MultiProxyHandler.RemotePlayerInfo::getUsername)
+                .map(RemotePlayerInfo::getUsername)
                 .collect(Collectors.joining(", "));
         message = Component.translatable("velocity.command.showall.message", NamedTextColor.WHITE,
                 Component.text(playerList));

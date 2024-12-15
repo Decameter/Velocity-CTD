@@ -234,8 +234,13 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
       bar.viewerDisconnected(this);
     }
 
-    this.server.getMultiProxyHandler().onPlayerLeave(this);
-    this.server.getQueueManager().onPlayerLeave(this);
+    if (this.server.getMultiProxyHandler().isEnabled()) {
+      this.server.getMultiProxyHandler().onPlayerLeave(this);
+    }
+
+    if (this.server.getQueueManager().isEnabled()) {
+      this.server.getQueueManager().onPlayerLeave(this);
+    }
   }
 
   public List<String> getAttemptedServers() {
@@ -877,7 +882,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   /**
-   * Finds another server to attempt to log into, if we were unexpectedly disconnected from the
+   * Finds another server to attempt to log into if we were unexpectedly disconnected from the
    * server.
    *
    * @return the next server to try
@@ -890,7 +895,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
   }
 
   /**
-   * Finds another server to attempt to log into, if we were unexpectedly disconnected from the
+   * Finds another server to attempt to log into if we were unexpectedly disconnected from the
    * server.
    *
    * @param current the "current" server that the player is on, useful as an override
@@ -954,8 +959,6 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
 
         selectedServer.ifPresent(registeredServer -> attemptedServers.add(registeredServer.getServerInfo().getName()));
         tryIndex = index;
-
-        RegisteredServer s = selectedServer.orElse(null);
 
         return selectedServer;
       }

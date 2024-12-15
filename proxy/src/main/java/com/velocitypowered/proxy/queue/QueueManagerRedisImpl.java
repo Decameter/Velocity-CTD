@@ -23,14 +23,10 @@ import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
 import com.velocitypowered.proxy.redis.RedisManagerImpl;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
-import com.velocitypowered.proxy.redis.multiproxy.RedisPlayerFetchQueuedServerRequest;
-import com.velocitypowered.proxy.redis.multiproxy.RedisPlayerSetQueuedServerRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueAddRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueAlreadyJoinedRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueDisableWaitingForConnectionRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueLeaveRequest;
-import com.velocitypowered.proxy.redis.multiproxy.RedisQueuePauseRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueSendRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisQueueSendStatusRequest;
 import com.velocitypowered.proxy.redis.multiproxy.RedisSendActionBarRequest;
@@ -84,29 +80,7 @@ public class QueueManagerRedisImpl extends QueueManager {
         }
       }
 
-      redisManager.send(new RedisPlayerSetQueuedServerRequest(it.playerUuid(), it.serverName()));
       status.queue(it.playerUuid(), it.priority(), it.fullBypass(), it.queueBypass());
-    });
-
-    redisManager.listen(RedisPlayerSetQueuedServerRequest.ID, RedisPlayerSetQueuedServerRequest.class, it -> {
-      MultiProxyHandler.RemotePlayerInfo info = this.server.getMultiProxyHandler().getPlayerInfo(it.player());
-      if (info != null) {
-        info.setQueuedServer(it.server());
-      }
-    });
-
-    redisManager.listen(RedisPlayerFetchQueuedServerRequest.ID, RedisPlayerFetchQueuedServerRequest.class, it -> {
-      if (this.server.getQueueManager().isMasterProxy()) {
-        String queuedServer = null;
-        for (ServerQueueStatus status : this.server.getQueueManager().getAll()) {
-          if (status.isQueued(it.player())) {
-            queuedServer = status.getServerName();
-          }
-        }
-        if (queuedServer != null) {
-          this.server.getRedisManager().send(new RedisPlayerSetQueuedServerRequest(it.player(), queuedServer));
-        }
-      }
     });
 
     redisManager.listen(RedisQueueLeaveRequest.ID, RedisQueueLeaveRequest.class, it -> {
@@ -121,7 +95,6 @@ public class QueueManagerRedisImpl extends QueueManager {
 
       boolean wasQueued = status.isQueued(it.playerUuid());
       status.dequeue(it.playerUuid(), false);
-      redisManager.send(new RedisPlayerSetQueuedServerRequest(it.playerUuid(), null));
 
       if (it.command()) {
         if (wasQueued) {
@@ -242,13 +215,6 @@ public class QueueManagerRedisImpl extends QueueManager {
                           .getMaxSendRetries()))));
         }
       });
-    });
-
-    redisManager.listen(RedisQueuePauseRequest.ID, RedisQueuePauseRequest.class, it -> {
-      ServerQueueStatus status = getQueue(it.server());
-      if (status != null) {
-        status.setPaused(it.pause());
-      }
     });
   }
 

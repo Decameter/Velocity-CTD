@@ -48,7 +48,7 @@ import com.velocitypowered.proxy.protocol.netty.MinecraftVarintLengthEncoder;
 import com.velocitypowered.proxy.protocol.util.ByteBufDataOutput;
 import com.velocitypowered.proxy.queue.QueueManagerRedisImpl;
 import com.velocitypowered.proxy.queue.ServerQueueStatus;
-import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -104,14 +104,12 @@ public class VelocityRegisteredServer implements RegisteredServer, ForwardingAud
   public List<PlayerInfo> getPlayerInfo() {
     if (!this.server.getMultiProxyHandler().isEnabled()) {
       List<PlayerInfo> info = new ArrayList<>();
-      players.forEach((uuid, player) -> {
-        info.add(new PlayerInfo(player.getUsername(), player.getUniqueId()));
-      });
+      players.forEach((uuid, player) -> info.add(new PlayerInfo(player.getUsername(), player.getUniqueId())));
       return info;
     }
 
     List<PlayerInfo> info = new ArrayList<>();
-    for (MultiProxyHandler.RemotePlayerInfo i : this.server.getMultiProxyHandler().getAllPlayers()) {
+    for (RemotePlayerInfo i : this.server.getMultiProxyHandler().getAllPlayers()) {
       if (i.getServerName() != null && i.getServerName().equalsIgnoreCase(getServerInfo().getName())) {
         info.add(new PlayerInfo(i.getName(), i.getUuid()));
       }
@@ -120,7 +118,7 @@ public class VelocityRegisteredServer implements RegisteredServer, ForwardingAud
     return info;
   }
 
-  public int getPlayerCount() {
+  public long getPlayerCount() {
     return this.players.size();
   }
 

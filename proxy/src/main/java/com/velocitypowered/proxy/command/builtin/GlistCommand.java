@@ -34,6 +34,7 @@ import com.velocitypowered.proxy.VelocityServer;
 import com.velocitypowered.proxy.command.VelocityCommands;
 import com.velocitypowered.proxy.plugin.virtual.VelocityVirtualPlugin;
 import com.velocitypowered.proxy.redis.multiproxy.MultiProxyHandler;
+import com.velocitypowered.proxy.redis.multiproxy.RemotePlayerInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -152,7 +153,7 @@ public class GlistCommand {
 
     if (multiProxyHandler.isEnabled()) {
       for (String proxyId : multiProxyHandler.getAllProxyIds()) {
-        for (MultiProxyHandler.RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
+        for (RemotePlayerInfo player : multiProxyHandler.getPlayers(proxyId)) {
           if (player.getServerName() == null || !player.getServerName().equals(server.getServerInfo().getName())) {
             continue;
           }

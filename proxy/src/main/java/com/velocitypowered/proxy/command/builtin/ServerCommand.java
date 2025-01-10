@@ -91,8 +91,8 @@ public final class ServerCommand {
                 return -1;
               }
 
-              if (this.server.getConfiguration().getQueue().getNoQueueServers()
-                      .contains(registeredServer.getServerInfo().getName()) || !server.getQueueManager().isQueueEnabled()
+              if (this.server.getConfiguration().getQueue().getNoQueueServers().contains(registeredServer.getServerInfo().getName())
+                      || !server.getQueueManager().isQueueEnabled()
                       || player.hasPermission("velocity.queue.bypass")) {
                 player.createConnectionRequest(registeredServer).connectWithIndication();
                 return Command.SINGLE_SUCCESS;

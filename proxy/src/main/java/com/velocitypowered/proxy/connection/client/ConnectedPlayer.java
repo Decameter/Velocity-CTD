@@ -875,8 +875,9 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
                     if (isValidReason && (!s.isPaused() || this.server.getConfiguration().getQueue().isAllowPausedQueueJoining())) {
                       s.queue(getUniqueId(),
                           getQueuePriority(originalEvent.getServer().getServerInfo().getName()),
-                          hasPermission("velocity.queue.full.bypass"),
-                          hasPermission("velocity.queue.bypass"));
+                          server.getQueueManager().isQueueEnabled() ? hasPermission("velocity.queue.full.bypass") : false,
+                          server.getQueueManager().isQueueEnabled() ? hasPermission("velocity.queue.bypass") : false
+                      );
                     }
                   }
                   break;
@@ -1202,6 +1203,10 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player, 
 
   @Override
   public int getQueuePriority(final String serverName) {
+    if (!server.getQueueManager().isQueueEnabled()) {
+      return 0;
+    }
+
     for (int i = 100; i > 0; i--) {
       if (hasPermission("velocity.queue.priority." + serverName + "." + i)) {
         return i;

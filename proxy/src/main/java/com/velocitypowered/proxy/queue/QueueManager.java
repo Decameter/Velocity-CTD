@@ -263,6 +263,7 @@ public abstract class QueueManager {
         return i;
       }
     }
+
     return -1;
   }
 

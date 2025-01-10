@@ -53,7 +53,7 @@ public class RedisRetriever implements QueueCacheRetriever {
   public ServerQueueStatus get(final String serverName) {
     VelocityRegisteredServer server = (VelocityRegisteredServer) proxy.getServer(serverName).orElse(null);
     if (server == null) {
-      throw new IllegalArgumentException("Attempted to fetch queue for invalid server: '" + serverName + "'");
+      return null;
     }
     SerializableQueue ser = this.redisManager.getQueue(serverName);
 
@@ -90,12 +90,13 @@ public class RedisRetriever implements QueueCacheRetriever {
   public List<ServerQueueStatus> getAll() {
     List<SerializableQueue> ser = redisManager.getAllQueues();
     List<ServerQueueStatus> queue = new ArrayList<>();
+
     ser.forEach(s -> {
       VelocityRegisteredServer server = (VelocityRegisteredServer) proxy.getServer(s.getServerName()).orElse(null);
-      if (server == null) {
-        throw new IllegalArgumentException("Attempted to fetch queue for invalid server: '" + s.getServerName() + "'");
+
+      if (server != null) {
+        queue.add(s.convert(proxy, server));
       }
-      queue.add(s.convert(proxy, server));
     });
 
     return queue;
